@@ -58,7 +58,7 @@ class Scraper:
                 # Next page
                 time.sleep(0.5)
                 print(i)
-                r = s.get(start_url + f'&page={i}')
+                r = self.s.get(start_url + f'&page={i}')
                 i += 1
             else:
                 print('No urls', start_url + f'&page={i - 1}')
