@@ -1,4 +1,6 @@
+import os
 import re
+import shutil
 import time
 from concurrent import futures
 
@@ -10,7 +12,7 @@ from selenium.webdriver.firefox.options import Options
 
 
 class Scraper:
-    def __init__(self):
+    def __init__(self, start_url="https://auto.ria.com/uk/"):
         self.dataframe = None
         self.scraped_data = []
 
@@ -22,22 +24,22 @@ class Scraper:
         # Initiating browser
         self.driver = webdriver.Firefox(options=options)
 
-    def scrape(self, start_url, brand):
         # Calling browser
         self.driver.get(start_url)
 
         # Set correct user agent
-        s = requests.Session()
+        self.s = requests.Session()
         selenium_user_agent = self.driver.execute_script("return navigator.userAgent;")
-        s.headers.update({"user-agent": selenium_user_agent})
+        self.s.headers.update({"user-agent": selenium_user_agent})
         for cookie in self.driver.get_cookies():
-            s.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
+            self.s.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
 
+    def scrape(self, start_url, brand):
         # This code get reviews from site and save them into .csv
         tic = time.perf_counter()
 
         i = 500
-        r = s.get(start_url)
+        r = self.s.get(start_url)
         while r.status_code == 200:
             urls = self.get_urls(r)
             if urls:
@@ -204,14 +206,23 @@ class Scraper:
                 result_info += tag.text + ';'
         return result_cats, result_info
 
+    @staticmethod
+    def scrape_images(urls, path_to_save):
+        for url in urls:
+            r = requests.get(url, stream=True)
+            if r.status_code == 200:
+                with open(os.path.join(path_to_save, f"{url.split('/')[-1]}"), 'wb') as f:
+                    r.raw.decode_content = True
+                    shutil.copyfileobj(r.raw, f)
 
-import json
-
-with open('json/brands.json') as f:
-    data = json.load(f)
-
-for brand, id in data.items():
-    print(brand)
-    url = f"https://auto.ria.com/uk/search/?categories.main.id=1&brand.id[0]={id}&year[0].gte=2000&indexName=auto,order_auto,newauto_search&body.id[0]=307&body.id[1]=449&body.id[2]=8&body.id[3]=2&body.id[4]=5&body.id[5]=3&body.id[6]=4&credit=0&confiscated=0&size=20"
-    s = Scraper()
-    s.scrape(url, brand)
+# import json
+#
+# with open('json/brands.json') as f:
+#     with open('json/brands.json') as f:
+#         data = json.load(f)
+#
+# for brand, id in data.items():
+#     print(brand)
+#     url = f"https://auto.ria.com/uk/search/?categories.main.id=1&brand.id[0]={id}&year[0].gte=2000&indexName=auto,order_auto,newauto_search&body.id[0]=307&body.id[1]=449&body.id[2]=8&body.id[3]=2&body.id[4]=5&body.id[5]=3&body.id[6]=4&credit=0&confiscated=0&size=20"
+#     s = Scraper()
+#     s.scrape(url, brand)
